@@ -1,5 +1,0 @@
-User-agent: *
-Allow: /
-
-# Block nothing — this is a public game, index everything
-Sitemap: https://dailysolitaire.app/sitemap.xml
