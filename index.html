@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23080613'/><text x='50' y='75' font-size='70' text-anchor='middle' fill='%23ff3d9a'>♠</text></svg>">
+
+<title>Ranked Solitaire — Climb from Bronze to Grand Master</title>
+<meta name="description" content="Play ranked Klondike solitaire. Beat the clock, earn ELO, and climb from Bronze to Grand Master. Unlimited games, harder seeds at higher ranks. Free, no downloads.">
+
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080613;
+  --pink:#ff3d9a;--blue:#3df0ff;--gold:#ffd700;
+  --gp:0 0 8px #ff3d9a,0 0 28px #ff3d9a55;
+  --gg:0 0 8px #ffd700,0 0 28px #ffd70055;
+  --cw:62px;--ch:87px;--cr:8px;--gap:6px;--pad:8px;
+  --fsize:11px;--ss:8px;--ms:26px;
+  --play-w:100vw;
+  --hdr-h:52px;
+  --banner-h:28px;
+}
+html{height:100%;touch-action:manipulation;overflow:hidden}
+body{background:var(--bg);font-family:'Nunito',sans-serif;color:#fff;height:100%;overflow:hidden;user-select:none;-webkit-user-select:none;overscroll-behavior:none}
+#sf{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.star{position:absolute;border-radius:50%;background:#fff;animation:twinkle var(--d,3s) var(--dl,0s) infinite alternate}
+@keyframes twinkle{0%{opacity:.07;transform:scale(1)}100%{opacity:.8;transform:scale(1.5)}}
+#wrap{display:flex;flex-direction:column;align-items:center;height:100vh;height:100dvh;width:100%;overflow:hidden;touch-action:manipulation}
+header{position:relative;z-index:200;flex-shrink:0;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:4px;padding:0 12px;height:var(--hdr-h);width:100%;max-width:var(--play-w);border-bottom:1px solid rgba(255,61,154,.2);background:rgba(8,6,19,.97);backdrop-filter:blur(12px)}
+.logo{font-family:'Lilita One',sans-serif;font-size:19px;letter-spacing:.04em;line-height:1;background:linear-gradient(130deg,#ff3d9a,#ffd700,#3df0ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.slot{width:var(--cw);height:var(--ch);border-radius:var(--cr);border:1.5px dashed rgba(61,240,255,.2);background:rgba(61,240,255,.025);position:relative;flex-shrink:0}
+.card{width:var(--cw);height:var(--ch);border-radius:var(--cr);position:absolute;border:2px solid rgba(255,255,255,.15);will-change:transform;touch-action:none;transition:box-shadow .1s}
+.card.dn{background:linear-gradient(145deg,#1a0538,#0a021a,#1a0538);border-color:rgba(255,61,154,.45)}
+.card.up{background:linear-gradient(160deg,#fffef8 0%,#faf5f0 60%,#f5ede8 100%);box-shadow:0 4px 20px rgba(0,0,0,.65),0 1px 0 rgba(255,255,255,.98) inset,0 -1px 0 rgba(0,0,0,.08) inset;cursor:grab}
+.cc{position:absolute;font-family:'Lilita One',sans-serif;padding:2px 3px;line-height:1;display:flex;flex-direction:column;align-items:center;gap:1px;pointer-events:none}
+.cc.tl{top:0;left:0}.cc.br{bottom:0;right:0;transform:rotate(180deg)}
+.cmid{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:calc(var(--cw) * 0.46);line-height:1;pointer-events:none;opacity:0.65}
+.tcol{width:var(--cw);flex-shrink:0;position:relative}
+#tab{display:flex;gap:var(--gap);flex:1;align-items:flex-start;overflow:hidden}
+@keyframes dealFly{0%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(var(--dr)) scale(.7)}100%{opacity:1;transform:translate(0,0) rotate(0) scale(1)}}
+.card.deal-anim{animation:dealFly var(--dur,.35s) cubic-bezier(.22,1,.36,1) var(--del,0s) both}
+</style>
+</head>
+<body>
+
+<div id="sf"></div>
+
+<div id="wrap">
+  <header>
+    <div class="h-left"><div class="logo">SOLITAIRE<span style="font-size:.55em;opacity:.5">.fail</span></div></div>
+    <div class="h-center">
+      <div class="chip"><div class="v" id="tel">0:00</div><div class="l">Time</div></div>
+    </div>
+    <div class="h-right">
+      <button class="btn" onclick="newGame()">New Game</button>
+    </div>
+  </header>
+
+  <div id="game" style="flex:1;width:100%;max-width:var(--play-w);display:flex;flex-direction:column;padding:8px;gap:8px">
+    <div id="toprow" style="display:flex;gap:8px">
+      <div class="slot" id="stock" style="cursor:pointer"><div class="si" style="color:var(--blue)">↺</div></div>
+      <div class="slot" id="waste"></div>
+      <div style="flex:1"></div>
+      <div class="slot" id="f0"></div>
+      <div class="slot" id="f1"></div>
+      <div class="slot" id="f2"></div>
+      <div class="slot" id="f3"></div>
+    </div>
+    <div id="tab" style="display:flex;gap:6px;flex:1"></div>
+  </div>
+</div>
+
+<script>
+// ====================== FIXED SOLITAIRE ======================
+const SUITS = ['♠','♥','♦','♣'];
+const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+
+let G = { stock:[], waste:[], fnd:[[],[],[],[]], tab:[] };
+let dealing = false;
+
+function mkDeck() {
+  const d = [];
+  for (let s = 0; s < 4; s++) {
+    for (let r = 0; r < 13; r++) {
+      d.push({
+        suit: SUITS[s],
+        si: s,
+        rank: RANKS[r],
+        val: r + 1,
+        color: (s === 1 || s === 2) ? 'red' : 'blk',
+        id: SUITS[s] + RANKS[r]
+      });
+    }
+  }
+  return d;
+}
+
+function rng32(seed) {
+  return () => {
+    seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = t + Math.imul(t ^ (t >>> 7), 61 | t) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffle(arr, seed) {
+  const r = rng32(seed);
+  const b = [...arr];
+  for (let i = b.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1));
+    [b[i], b[j]] = [b[j], b[i]];
+  }
+  return b;
+}
+
+function mkCard(c) {
+  const el = document.createElement('div');
+  el.className = `card ${c.up ? `up ${c.color}` : 'dn'}`;
+  el.dataset.id = c.id;
+
+  if (c.up) {
+    const tl = document.createElement('div'); tl.className = 'cc tl';
+    tl.innerHTML = `<span class="cr">${c.rank}</span><span class="cs">${c.suit}</span>`;
+    const br = document.createElement('div'); br.className = 'cc br';
+    br.innerHTML = `<span class="cr">${c.rank}</span><span class="cs">${c.suit}</span>`;
+    const mid = document.createElement('div'); mid.className = 'cmid'; mid.textContent = c.suit;
+    el.append(tl, br, mid);
+  } else {
+    const back = document.createElement('div');
+    back.style.cssText = 'position:absolute;inset:0;display:grid;place-items:center;font-size:32px;opacity:0.25;color:#ff3d9a';
+    back.textContent = '♦';
+    el.appendChild(back);
+  }
+  return el;
+}
+
+function calcOffsets() {
+  const cw = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cw'));
+  return { fd: Math.floor(cw * 0.22), fu: Math.floor(cw * 0.28) };
+}
+
+async function waitForLayout() {
+  return new Promise(r => { requestAnimationFrame(() => requestAnimationFrame(r)); });
+}
+
+async function dealAnimation() {
+  dealing = true;
+  const tabEl = document.getElementById('tab');
+  tabEl.innerHTML = '';
+
+  const { fd, fu } = calcOffsets();
+  const { cw, ch } = { cw: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--cw')), ch: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ch')) };
+
+  const colEls = [];
+
+  for (let col = 0; col < 7; col++) {
+    const ce = document.createElement('div');
+    ce.className = 'tcol';
+    ce.dataset.col = col;
+
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    ce.appendChild(slot);
+
+    const pile = G.tab[col];
+    let topY = 0;
+    for (let row = 0; row < pile.length; row++) {
+      if (row > 0) topY += pile[row-1].up ? fu : fd;
+      const cardEl = mkCard(pile[row]);
+      cardEl.style.cssText = `position:absolute;top:${topY}px;z-index:${row+10};opacity:0`;
+      ce.appendChild(cardEl);
+    }
+    ce.style.height = (topY + ch + 20) + 'px';
+    tabEl.appendChild(ce);
+    colEls.push(ce);
+  }
+
+  await waitForLayout();
+
+  const stockRect = document.getElementById('stock').getBoundingClientRect();
+
+  // Deal animation
+  let delay = 0;
+  for (let col = 0; col < 7; col++) {
+    const pile = G.tab[col];
+    let topY = 0;
+    for (let row = 0; row < pile.length; row++) {
+      if (row > 0) topY += pile[row-1].up ? fu : fd;
+
+      const cardEl = colEls[col].children[row + 1];
+      if (!cardEl) continue;
+
+      const targetRect = colEls[col].getBoundingClientRect();
+      const dx = (stockRect.left + stockRect.width/2) - (targetRect.left + cw/2);
+      const dy = (stockRect.top + stockRect.height/2) - (targetRect.top + topY + ch/2);
+
+      cardEl.style.setProperty('--dx', dx + 'px');
+      cardEl.style.setProperty('--dy', dy + 'px');
+      cardEl.style.setProperty('--dr', (Math.random()*30 - 15) + 'deg');
+      cardEl.style.setProperty('--dur', (0.28 + Math.random()*0.12) + 's');
+      cardEl.style.setProperty('--del', delay + 'ms');
+      cardEl.classList.add('deal-anim');
+      cardEl.style.opacity = '1';
+
+      delay += 28;
+    }
+  }
+
+  // Flip tops
+  setTimeout(() => {
+    for (let col = 0; col < 7; col++) {
+      const pile = G.tab[col];
+      if (!pile.length) continue;
+      const topCardEl = colEls[col].querySelectorAll('.card')[pile.length - 1];
+      if (topCardEl) {
+        topCardEl.classList.add('up', pile[pile.length-1].color);
+        topCardEl.classList.remove('dn');
+        topCardEl.innerHTML = '';
+        const tl = document.createElement('div'); tl.className='cc tl';
+        tl.innerHTML = `<span class="cr">${pile[pile.length-1].rank}</span><span class="cs">${pile[pile.length-1].suit}</span>`;
+        const br = document.createElement('div'); br.className='cc br';
+        br.innerHTML = `<span class="cr">${pile[pile.length-1].rank}</span><span class="cs">${pile[pile.length-1].suit}</span>`;
+        const mid = document.createElement('div'); mid.className='cmid'; mid.textContent = pile[pile.length-1].suit;
+        topCardEl.append(tl, br, mid);
+      }
+    }
+  }, 800);
+
+  setTimeout(() => {
+    dealing = false;
+    render();
+  }, 1400);
+}
+
+function init() {
+  const deck = shuffle(mkDeck(), 1234567); // fixed seed for testing
+
+  G = { stock: [], waste: [], fnd: [[],[],[],[]], tab: [] };
+
+  let idx = 0;
+  for (let c = 0; c < 7; c++) {
+    const pile = [];
+    for (let r = 0; r <= c; r++) {
+      pile.push({ ...deck[idx++], up: r === c });
+    }
+    G.tab.push(pile);
+  }
+  G.stock = deck.slice(idx).map(c => ({...c, up: false}));
+
+  renderFnds();
+  renderStock();
+  dealAnimation();
+}
+
+function renderStock() {
+  const el = document.getElementById('stock');
+  el.innerHTML = '<div class="si" style="color:var(--blue)">↺</div>';
+  if (G.stock.length) {
+    const n = Math.min(3, G.stock.length);
+    for (let i = 0; i < n; i++) {
+      const c = mkCard(G.stock[G.stock.length - 1 - i]);
+      c.style.position = 'absolute';
+      c.style.top = (-i*4) + 'px';
+      c.style.left = (i*3) + 'px';
+      c.style.opacity = (0.6 + i*0.15);
+      el.appendChild(c);
+    }
+  }
+}
+
+function renderWaste() {
+  const el = document.getElementById('waste');
+  el.innerHTML = '';
+  if (!G.waste.length) return;
+  const n = Math.min(3, G.waste.length);
+  for (let i = 0; i < n; i++) {
+    const card = G.waste[G.waste.length - n + i];
+    const c = mkCard(card);
+    c.style.position = 'absolute';
+    c.style.left = (i * 12) + 'px';
+    el.appendChild(c);
+  }
+}
+
+function renderFnds() {
+  for (let i = 0; i < 4; i++) {
+    const el = document.getElementById('f' + i);
+    el.innerHTML = '';
+    if (G.fnd[i].length) {
+      const top = G.fnd[i][G.fnd[i].length - 1];
+      const c = mkCard(top);
+      el.appendChild(c);
+    } else {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'position:absolute;inset:0;display:grid;place-items:center;font-size:28px;opacity:0.15;color:#ff3d9a';
+      empty.textContent = 'A';
+      el.appendChild(empty);
+    }
+  }
+}
+
+function renderTab() {
+  const container = document.getElementById('tab');
+  container.innerHTML = '';
+  const { fd, fu } = calcOffsets();
+
+  for (let col = 0; col < 7; col++) {
+    const ce = document.createElement('div');
+    ce.className = 'tcol';
+    ce.dataset.col = col;
+
+    const slot = document.createElement('div');
+    slot.className = 'slot';
+    ce.appendChild(slot);
+
+    let y = 0;
+    G.tab[col].forEach((card, i) => {
+      if (i > 0) y += card.up ? fu : fd;
+      const c = mkCard(card);
+      c.style.top = y + 'px';
+      c.style.zIndex = i + 10;
+      ce.appendChild(c);
+    });
+    container.appendChild(ce);
+  }
+}
+
+function render() {
+  renderStock();
+  renderWaste();
+  renderFnds();
+  renderTab();
+}
+
+// Expose for buttons
+window.newGame = init;
+
+// Start the game
+window.onload = init;
+</script>
+</body>
+</html>
